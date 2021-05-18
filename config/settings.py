@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     # Local
+    'short_messages.apps.ShortMessagesConfig',
 ]
 
 MIDDLEWARE = [
