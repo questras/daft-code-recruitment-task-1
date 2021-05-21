@@ -18,6 +18,7 @@ from django.urls import path, include
 
 api_urlpatterns = [
     path('', include('short_messages.urls')),
+    path('auth/', include('token_auth.urls')),
 ]
 
 urlpatterns = [

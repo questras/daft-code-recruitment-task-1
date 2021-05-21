@@ -41,9 +41,11 @@ INSTALLED_APPS = [
 
     # 3rd party
     'rest_framework',
+    'rest_framework.authtoken',
 
     # Local
     'short_messages.apps.ShortMessagesConfig',
+    'token_auth.apps.TokenAuthConfig',
 ]
 
 MIDDLEWARE = [

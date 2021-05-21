@@ -1,8 +1,25 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 from .models import ShortMessage
+
+User = get_user_model()
+
+
+def create_test_user():
+    """Create a test user for testing purposes."""
+    return User.objects.create(username='test_username', password='test_password')
+
+
+def authorize_user(case: APITestCase, user: User):
+    """Authorize given user in given test case so the requests
+    will be authorized."""
+
+    token = Token.objects.create(user=user)
+    case.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
 
 
 class ShortMessageModelTests(APITestCase):
@@ -44,12 +61,19 @@ class ShortMessageModelTests(APITestCase):
 
 class CreateShortMessageEndpointTests(APITestCase):
     def setUp(self) -> None:
+        self.user = create_test_user()
         self.url = reverse('shortmessage-list')
         self.data = {
             'body': 'test-body'
         }
 
+    def test_unauthenticated_user_cannot_create(self):
+        r = self.client.post(self.url, self.data)
+        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(ShortMessage.objects.all().count(), 0)
+
     def test_can_create_with_correct_body(self):
+        authorize_user(self, self.user)
         r = self.client.post(self.url, self.data)
 
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
@@ -62,6 +86,7 @@ class CreateShortMessageEndpointTests(APITestCase):
     def test_specified_views_counter_in_request_data_doesnt_work(self):
         """Test whether specifying `views_counter` in request data
         has no effect on newly created message."""
+        authorize_user(self, self.user)
 
         self.data['views_counter'] = 100
 
@@ -73,6 +98,7 @@ class CreateShortMessageEndpointTests(APITestCase):
         self.assertEqual(ShortMessage.objects.all()[0].views_counter, 0)
 
     def test_cannot_create_message_with_empty_body(self):
+        authorize_user(self, self.user)
         self.data['body'] = ''
 
         r = self.client.post(self.url, self.data)
@@ -80,6 +106,7 @@ class CreateShortMessageEndpointTests(APITestCase):
         self.assertEqual(ShortMessage.objects.all().count(), 0)
 
     def test_cannot_create_message_with_too_long_body(self):
+        authorize_user(self, self.user)
         body_length = 161  # One more than maximum length.
         self.data['body'] = body_length * 't'
 
@@ -90,16 +117,25 @@ class CreateShortMessageEndpointTests(APITestCase):
 
 class DeleteShortMessageEndpointTests(APITestCase):
     def setUp(self) -> None:
+        self.user = create_test_user()
         self.message = ShortMessage.objects.create(body='test')
         self.url = reverse('shortmessage-detail', args=(self.message.id,))
 
+    def test_unauthenticated_user_cannot_delete(self):
+        r = self.client.delete(self.url)
+        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(ShortMessage.objects.all().count(), 1)
+
     def test_can_delete_message(self):
+        authorize_user(self, self.user)
+
         self.assertEqual(ShortMessage.objects.all().count(), 1)
         r = self.client.delete(self.url)
         self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(ShortMessage.objects.all().count(), 0)
 
     def test_deleting_non_existing_message_returns_404_code(self):
+        authorize_user(self, self.user)
         self.assertEqual(ShortMessage.objects.all().count(), 1)
 
         new_url = reverse('shortmessage-detail', args=(self.message.id + 1,))
@@ -110,6 +146,7 @@ class DeleteShortMessageEndpointTests(APITestCase):
 
 class UpdateShortMessageEndpointTests(APITestCase):
     def setUp(self) -> None:
+        self.user = create_test_user()
         self.message = ShortMessage.objects.create(
             body='test',
             views_counter=100
@@ -119,7 +156,13 @@ class UpdateShortMessageEndpointTests(APITestCase):
             'body': 'updated-body'
         }
 
+    def test_unauthenticated_user_cannot_update(self):
+        r = self.client.put(self.url, self.data)
+        self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_can_update_with_correct_data(self):
+        authorize_user(self, self.user)
+
         r = self.client.put(self.url, self.data)
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
@@ -127,6 +170,8 @@ class UpdateShortMessageEndpointTests(APITestCase):
         self.assertEqual(message.body, self.data['body'])
 
     def test_views_counter_is_reset_to_zero_after_update(self):
+        authorize_user(self, self.user)
+
         self.assertNotEqual(self.message.views_counter, 0)
         r = self.client.put(self.url, self.data)
         self.assertEqual(r.status_code, status.HTTP_200_OK)
@@ -135,6 +180,7 @@ class UpdateShortMessageEndpointTests(APITestCase):
         self.assertEqual(message.views_counter, 0)
 
     def test_cannot_update_with_empty_body(self):
+        authorize_user(self, self.user)
         self.data['body'] = ''
 
         r = self.client.put(self.url, self.data)
@@ -146,6 +192,7 @@ class UpdateShortMessageEndpointTests(APITestCase):
         self.assertEqual(message.views_counter, self.message.views_counter)
 
     def test_cannot_update_with_too_long_body(self):
+        authorize_user(self, self.user)
         body_length = 161  # One more than maximum length.
         self.data['body'] = body_length * 't'
 
@@ -160,6 +207,7 @@ class UpdateShortMessageEndpointTests(APITestCase):
     def test_specified_views_counter_in_request_data_doesnt_work(self):
         """Test whether specifying `views_counter` in request data
         has no effect on updated message."""
+        authorize_user(self, self.user)
 
         self.data['views_counter'] = 42
         r = self.client.put(self.url, self.data)
