@@ -15,6 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
 
 api_urlpatterns = [
     path('', include('short_messages.urls')),
@@ -22,6 +23,8 @@ api_urlpatterns = [
 ]
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('api/v1/', include(api_urlpatterns)),
 ]
+
+if settings.DEBUG:
+    urlpatterns.append(path('admin/', admin.site.urls))
