@@ -1,4 +1,6 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.authentication import TokenAuthentication
 
 from .models import ShortMessage
 from .serializers import ShortMessageSerializer
@@ -18,6 +20,8 @@ class ShortMessageViewSet(ModelViewSet):
     """
     queryset = ShortMessage.objects.all()
     serializer_class = ShortMessageSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    authentication_classes = (TokenAuthentication,)
 
     def retrieve(self, request, *args, **kwargs):
         message = self.get_object()
