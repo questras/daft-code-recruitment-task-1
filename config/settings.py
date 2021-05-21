@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # Local
     'short_messages.apps.ShortMessagesConfig',
+    'token_auth.apps.TokenAuthConfig',
 ]
 
 MIDDLEWARE = [
